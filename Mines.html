@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AETHER MINES — FD44 Sync Edition</title>
+
+  <!-- Firebase App SDK & Realtime Database SDK (Matching Platform) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <style>
+    /* ==========================================================================
+       ULTRA-REALISTIC CASINO SYSTEM VARIABLES
+       ========================================================================== */
+    :root {
+      --bg-radial: radial-gradient(circle at 50% 15%, #18233c 0%, #0c1220 45%, #050811 100%);
+      --panel-bg: rgba(15, 23, 42, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --gold-primary: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.5);
+      --cyan-neon: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.45);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.55);
+      --crimson: #ef4444;
+      --crimson-glow: rgba(239, 68, 68, 0.6);
+      
+      --tile-base: linear-gradient(180deg, #273552 0%, #151e32 60%, #0f1626 100%);
+      --tile-bevel-light: inset 0 2px 2px rgba(255, 255, 255, 0.28), inset 0 -3px 6px rgba(0, 0, 0, 0.7);
+      --tile-shadow: 0 8px 18px rgba(0, 0, 0, 0.7), 0 2px 4px rgba(0, 0, 0, 0.9);
+      
+      --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: var(--font-main);
+    }
+
+    body {
+      background: #050811;
+      background-image: var(--bg-radial);
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    #ambientCanvas, #fxCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+    }
+    #ambientCanvas { z-index: 1; }
+    #fxCanvas { z-index: 100; }
+
+    .app-viewport {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      padding: 12px 14px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 2;
+    }
+
+    @media (min-width: 768px) {
+      .app-viewport {
+        min-height: auto;
+        padding: 22px;
+      }
+    }
+
+    .glass-box {
+      background: var(--panel-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      margin-bottom: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      fill: var(--cyan-neon);
+      filter: drop-shadow(0 0 10px var(--cyan-glow));
+    }
+
+    .brand-name {
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #ffffff 40%, var(--cyan-neon));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: #94a3b8;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .icon-btn:hover {
+      color: #fff;
+      border-color: var(--cyan-neon);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+    .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #8da2c0;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .stat-value.gold {
+      color: var(--gold-primary);
+      text-shadow: 0 0 14px var(--gold-glow);
+    }
+
+    .stat-value.cyan {
+      color: var(--cyan-neon);
+      text-shadow: 0 0 14px var(--cyan-glow);
+    }
+
+    .multiplier-wrapper {
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .multiplier-tape {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+    }
+    .multiplier-tape::-webkit-scrollbar { display: none; }
+
+    .step-pill {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      background: rgba(255, 255, 255, 0.04);
+      color: #4b5f80;
+      white-space: nowrap;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1px solid transparent;
+    }
+
+    .step-pill.active {
+      background: linear-gradient(135deg, #00f0ff, #0088ff);
+      color: #030814;
+      font-weight: 900;
+      box-shadow: 0 0 18px var(--cyan-neon);
+      transform: scale(1.08);
+      border-color: #fff;
+    }
+
+    .step-pill.passed {
+      background: rgba(16, 185, 129, 0.16);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: var(--emerald);
+    }
+
+    .grid-container {
+      padding: 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, rgba(18, 28, 50, 0.7), rgba(8, 13, 24, 0.95));
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .grid-board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      perspective: 1200px;
+    }
+
+    .tile {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s;
+    }
+
+    .tile:not(.flipped) {
+      background: var(--tile-base);
+      box-shadow: var(--tile-shadow), var(--tile-bevel-light);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tile:not(.flipped):hover {
+      transform: translateY(-2px) scale(1.03);
+      border-color: var(--cyan-neon);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.8), 0 0 16px var(--cyan-glow), var(--tile-bevel-light);
+    }
+
+    .tile:active {
+      transform: translateY(3px) scale(0.95) !important;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.9), inset 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+
+    .tile-inner {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+    }
+
+    .tile.flipped .tile-inner {
+      transform: rotateY(180deg);
+    }
+
+    .tile-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tile-front {
+      background: transparent;
+    }
+    .tile-front::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05));
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.4);
+    }
+
+    .tile-back {
+      transform: rotateY(180deg);
+      background: #090e1a;
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.9);
+    }
+
+    .tile.safe .tile-back {
+      background: radial-gradient(circle at 50% 50%, #0a2540 0%, #041426 70%, #010812 100%);
+      border: 1.5px solid var(--cyan-neon);
+      box-shadow: 0 0 24px var(--cyan-glow), inset 0 0 14px rgba(0, 240, 255, 0.4);
+    }
+
+    .tile.mine .tile-back {
+      background: radial-gradient(circle at 50% 50%, #4a0d18 0%, #29040b 70%, #120104 100%);
+      border: 1.5px solid var(--crimson);
+      box-shadow: 0 0 26px var(--crimson-glow), inset 0 0 16px rgba(239, 68, 68, 0.5);
+    }
+
+    .tile-svg {
+      width: 82%;
+      height: 82%;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.8));
+      animation: popZoom 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes popZoom {
+      0% { transform: scale(0.2) rotate(-15deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    .shake-impact {
+      animation: impactShake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes impactShake {
+      10%, 90% { transform: translate3d(-3px, 0, 0); }
+      20%, 80% { transform: translate3d(5px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+
+    .controls-panel {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .control-header {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #8da2c0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background: rgba(5, 8, 17, 0.7);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .diff-tab {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 9px 0;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.2s;
+    }
+
+    .diff-tab span.sub {
+      font-size: 0.65rem;
+      opacity: 0.75;
+    }
+
+    .diff-tab.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(0, 100, 255, 0.35));
+      color: #ffffff;
+      border: 1px solid var(--cyan-neon);
+      box-shadow: 0 4px 14px rgba(0, 240, 255, 0.25);
+    }
+
+    .bet-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bet-input-wrap {
+      display: flex;
+      align-items: center;
+      background: rgba(5, 8, 17, 0.7);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 4px 6px;
+      gap: 6px;
+    }
+
+    .bet-input-wrap:focus-within {
+      border-color: var(--cyan-neon);
+      box-shadow: 0 0 14px var(--cyan-glow);
+    }
+
+    .taka-sign {
+      color: var(--gold-primary);
+      font-weight: 900;
+      font-size: 1.2rem;
+      margin-left: 8px;
+    }
+
+    .bet-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 900;
+      outline: none;
+      min-width: 0;
+    }
+
+    .quick-chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      font-weight: 800;
+      font-size: 0.72rem;
+      padding: 7px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quick-chip:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    .action-btn {
+      width: 100%;
+      border: none;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .action-btn.start {
+      background: linear-gradient(135deg, #00f0ff 0%, #0062ff 100%);
+      color: #030814;
+      box-shadow: 0 6px 24px var(--cyan-glow);
+    }
+    .action-btn.start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 240, 255, 0.65);
+    }
+
+    .action-btn.cashout {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 24px var(--emerald-glow);
+    }
+    .action-btn.cashout:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(16, 185, 129, 0.75);
+    }
+
+    .action-btn:active { transform: scale(0.97); }
+
+    #loaderScreen {
+      position: fixed;
+      inset: 0;
+      background: #050811;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 16px;
+      max-width: 440px;
+      margin: 0 auto;
+      transition: opacity 0.5s ease;
+    }
+    #loaderScreen.fade-out { opacity: 0; pointer-events: none; }
+
+    .shimmer {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .shimmer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      animation: shim 1.6s infinite;
+    }
+    @keyframes shim { 100% { transform: translateX(100%); } }
+
+    .status-toast {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      padding: 16px 28px;
+      border-radius: 18px;
+      background: rgba(8, 14, 28, 0.96);
+      border: 1.5px solid var(--cyan-neon);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.85), 0 0 30px var(--cyan-glow);
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 50;
+      min-width: 230px;
+    }
+    .status-toast.visible {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .toast-title { font-size: 1.25rem; font-weight: 900; margin-bottom: 4px; text-transform: uppercase; }
+    .toast-desc { font-size: 0.85rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Stars Canvas -->
+  <canvas id="ambientCanvas"></canvas>
+  <canvas id="fxCanvas"></canvas>
+
+  <!-- Preloader -->
+  <div id="loaderScreen">
+    <div class="shimmer" style="height: 52px;"></div>
+    <div class="shimmer" style="height: 50px;"></div>
+    <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:8px; height:310px;">
+      <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>
+      <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>
+      <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>
+      <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>
+      <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>
+    </div>
+    <div style="text-align:center; padding:10px;">
+      <div style="font-weight:900; font-size:0.9rem; letter-spacing:1.5px; color:var(--cyan-neon)" id="loaderText">CONNECTING SECURE VAULT... 0%</div>
+    </div>
+    <div class="shimmer" style="height: 120px;"></div>
+  </div>
+
+  <!-- Main Viewport -->
+  <main class="app-viewport">
+    
+    <!-- Header -->
+    <header class="header glass-box">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <h1 class="brand-name">MINES</h1>
+      </div>
+      <button id="soundToggleBtn" class="icon-btn" title="সাউন্ড অন/অফ">
+        <svg id="soundIcon" viewBox="0 0 24 24">
+          <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Stats Bar: TAKA & Multiplier -->
+    <section class="stats-row">
+      <div class="stat-card glass-box">
+        <span class="stat-label">৳ ব্যালেন্স (TAKA)</span>
+        <div class="stat-value gold">
+          <span>৳</span>
+          <span id="takaBalance">0.00</span>
+        </div>
+      </div>
+      <div class="stat-card glass-box">
+        <span class="stat-label">বর্তমান গুণক</span>
+        <div class="stat-value cyan" id="activeMultDisplay">1.00×</div>
+      </div>
+    </section>
+
+    <!-- Multiplier Tape -->
+    <nav class="multiplier-wrapper glass-box">
+      <div class="multiplier-tape" id="multiplierTrack"></div>
+    </nav>
+
+    <!-- 5x5 Mine Arena -->
+    <section class="grid-container">
+      <div class="grid-board" id="gridBoard"></div>
+
+      <!-- Toast Feedback -->
+      <div id="statusToast" class="status-toast">
+        <div class="toast-title" id="toastTitle">রাউন্ড শেষ!</div>
+        <div class="toast-desc" id="toastDesc">০ টাকা ক্যাশআউট</div>
+      </div>
+    </section>
+
+    <!-- Controls Panel -->
+    <footer class="controls-panel glass-box">
+      
+      <!-- Difficulty Mode Selector -->
+      <div class="difficulty-box">
+        <div class="control-header">
+          <span>গেম মোড (বোম সংখ্যা)</span>
+          <span id="mineBadge" style="color:var(--cyan-neon)">২ টি বোম</span>
+        </div>
+        <div class="difficulty-grid" id="diffSelector">
+          <button class="diff-tab active" data-mines="2">
+            <span>NORMAL</span>
+            <span class="sub">২ বোম</span>
+          </button>
+          <button class="diff-tab" data-mines="4">
+            <span>EASY</span>
+            <span class="sub">৪ বোম</span>
+          </button>
+          <button class="diff-tab" data-mines="5">
+            <span>MIN / HARD</span>
+            <span class="sub">৫ বোম</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bet Input (Min 5 - Max 2999) -->
+      <div class="bet-box">
+        <div class="control-header">
+          <span>বাজির পরিমাণ (TAKA)</span>
+          <span style="color:#64748b">লিমিট: ৳৫ - ৳২৯৯৯</span>
+        </div>
+        <div class="bet-input-wrap">
+          <span class="taka-sign">৳</span>
+          <input type="number" id="betAmountInput" class="bet-input" value="100" min="5" max="2999" />
+          <button class="quick-chip" id="chipMin">Min</button>
+          <button class="quick-chip" id="chipHalf">1/2</button>
+          <button class="quick-chip" id="chipDouble">2X</button>
+          <button class="quick-chip" id="chipMax">Max</button>
+        </div>
+      </div>
+
+      <!-- Main Action Button -->
+      <button id="primaryActionBtn" class="action-btn start">
+        <span>নতুন রাউন্ড শুরু করুন</span>
+      </button>
+
+    </footer>
+
+  </main>
+
+  <!-- JAVASCRIPT ENGINE WITH FIREBASE REALTIME SYNC -->
+  <script>
+    /* ==========================================================================
+       1. MATCHING FIREBASE REALTIME DATABASE SYNC SETUP
+       ========================================================================== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzG6l80RC_DnwKk7KlvVod2YU8GIC2oio",
+      authDomain: "nskk-2ca2d.firebaseapp.com",
+      databaseURL: "https://nskk-2ca2d-default-rtdb.firebaseio.com",
+      projectId: "nskk-2ca2d",
+      storageBucket: "nskk-2ca2d.firebasestorage.app",
+      messagingSenderId: "629774743594",
+      appId: "1:629774743594:web:a1610ad2d204eb791deb53",
+      measurementId: "G-YDXWDVFPZ3"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+    let activePhone = null;
+
+    /* ==========================================================================
+       2. REALISTIC AUDIO ENGINE
+       ========================================================================== */
+    class RealisticSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+
+      playClick() {
+        if (this.muted) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+      }
+
+      playDiamond(step) {
+        if (this.muted) return;
+        this.init();
+        const baseFreq = 587.33 + Math.min(step * 70, 900);
+        [1, 2.02, 3.14].forEach((harmonic, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = idx === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(baseFreq * harmonic, this.ctx.currentTime);
+          
+          const vol = 0.25 / (idx + 1);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.35);
+        });
+      }
+
+      playBlast() {
+        if (this.muted) return;
+        this.init();
+        const sub = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        sub.frequency.setValueAtTime(150, this.ctx.currentTime);
+        sub.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.4);
+        subGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+        subGain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+        sub.connect(subGain);
+        subGain.connect(this.ctx.destination);
+        sub.start();
+        sub.stop(this.ctx.currentTime + 0.4);
+
+        const bufferSize = this.ctx.sampleRate * 0.45;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.4);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+        noiseGain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.45);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        noise.start();
+        noise.stop(this.ctx.currentTime + 0.45);
+      }
+
+      playCashout() {
+        if (this.muted) return;
+        this.init();
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.06 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(this.ctx.currentTime + idx * 0.06);
+          osc.stop(this.ctx.currentTime + idx * 0.06 + 0.38);
+        });
+      }
+    }
+
+    /* ==========================================================================
+       3. DYNAMIC PARTICLE ENGINE
+       ========================================================================= */
+    const fxCanvas = document.getElementById('fxCanvas');
+    const fxCtx = fxCanvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      fxCanvas.width = window.innerWidth;
+      fxCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function spawnDiamondSparks(x, y) {
+      for (let i = 0; i < 22; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 2;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1,
+          size: Math.random() * 3 + 2,
+          color: Math.random() > 0.4 ? '#00f0ff' : '#67e8f9',
+          alpha: 1,
+          life: 0.95
+        });
+      }
+    }
+
+    function spawnExplosionSparks(x, y) {
+      for (let i = 0; i < 35; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 6 + 2;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: Math.random() * 4 + 3,
+          color: Math.random() > 0.5 ? '#ff3366' : '#f59e0b',
+          alpha: 1,
+          life: 0.92
+        });
+      }
+    }
+
+    function updateParticles() {
+      fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+        p.alpha *= p.life;
+        
+        fxCtx.beginPath();
+        fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fxCtx.fillStyle = p.color;
+        fxCtx.globalAlpha = p.alpha;
+        fxCtx.shadowColor = p.color;
+        fxCtx.shadowBlur = 8;
+        fxCtx.fill();
+        fxCtx.shadowBlur = 0;
+
+        if (p.alpha <= 0.03) particles.splice(i, 1);
+      }
+      fxCtx.globalAlpha = 1;
+      requestAnimationFrame(updateParticles);
+    }
+    updateParticles();
+
+    /* ==========================================================================
+       4. SCREENSHOT-MATCHED 3D CRYSTAL BLUE STAR COIN VECTOR ARTWORK
+       ========================================================================== */
+    const SVG_REAL_DIAMOND = `
+      <svg class="tile-svg" viewBox="0 0 100 100">
+        <defs>
+          <!-- Outer coin electric blue glow -->
+          <filter id="blueCoinGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#00d8ff" flood-opacity="0.9"/>
+          </filter>
+
+          <!-- 3D Beveled Coin Rim Gradient -->
+          <linearGradient id="coinRimGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="25%" stop-color="#70e2ff"/>
+            <stop offset="55%" stop-color="#0088ff"/>
+            <stop offset="85%" stop-color="#003db3"/>
+            <stop offset="100%" stop-color="#001a5e"/>
+          </linearGradient>
+
+          <!-- Deep Crystal Blue Coin Base Gradient -->
+          <radialGradient id="crystalBaseGrad" cx="42%" cy="38%" r="62%">
+            <stop offset="0%" stop-color="#38d4ff"/>
+            <stop offset="35%" stop-color="#0088ff"/>
+            <stop offset="75%" stop-color="#0035a8"/>
+            <stop offset="100%" stop-color="#001447"/>
+          </radialGradient>
+
+          <!-- 3D Star Highlight Side -->
+          <linearGradient id="starFacetLight" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="60%" stop-color="#d0f4ff"/>
+            <stop offset="100%" stop-color="#7dd3fc"/>
+          </linearGradient>
+
+          <!-- 3D Star Shadow Side -->
+          <linearGradient id="starFacetDark" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#38bdf8"/>
+            <stop offset="60%" stop-color="#0284c7"/>
+            <stop offset="100%" stop-color="#004e9a"/>
+          </linearGradient>
+
+          <!-- Star Center Glow Filter -->
+          <filter id="starBloom" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#ffffff" flood-opacity="0.75"/>
+          </filter>
+        </defs>
+
+        <!-- 1. Outer Coin Base Disc -->
+        <circle cx="50" cy="50" r="45" fill="url(#coinRimGrad)" filter="url(#blueCoinGlow)"/>
+
+        <!-- 2. Dark Edge Bevel Groove -->
+        <circle cx="50" cy="50" r="41.5" fill="#022766" stroke="#4be5ff" stroke-width="1.2"/>
+
+        <!-- 3. Inner Faceted Crystal Face -->
+        <circle cx="50" cy="50" r="37.5" fill="url(#crystalBaseGrad)"/>
+
+        <!-- 4. Prismatic Gem Cut Facets (Diamond texture inside coin) -->
+        <polygon points="50,13 65,24 50,50" fill="#a5f3fc" opacity="0.32"/>
+        <polygon points="65,24 87,35 50,50" fill="#38bdf8" opacity="0.38"/>
+        <polygon points="87,35 83,64 50,50" fill="#0284c7" opacity="0.3"/>
+        <polygon points="83,64 50,87 50,50" fill="#0052b3" opacity="0.45"/>
+        <polygon points="50,87 17,64 50,50" fill="#002b80" opacity="0.55"/>
+        <polygon points="17,64 13,35 50,50" fill="#0284c7" opacity="0.35"/>
+        <polygon points="13,35 35,24 50,50" fill="#38bdf8" opacity="0.4"/>
+        <polygon points="35,24 50,13 50,50" fill="#ffffff" opacity="0.45"/>
+
+        <!-- 5. Inner Concentric Ring -->
+        <circle cx="50" cy="50" r="37.5" fill="none" stroke="#bbf2ff" stroke-width="1.5" opacity="0.85"/>
+        <circle cx="50" cy="50" r="33.5" fill="none" stroke="#00d8ff" stroke-width="1" opacity="0.6"/>
+
+        <!-- 6. 3D Beveled Chrome Star (Screenshot Match) -->
+        <g filter="url(#starBloom)">
+          <!-- Top Point -->
+          <polygon points="50,50 50,26 44.12,41.91" fill="url(#starFacetLight)"/>
+          <polygon points="50,50 50,26 55.88,41.91" fill="url(#starFacetDark)"/>
+
+          <!-- Top-Right Point -->
+          <polygon points="50,50 72.82,42.58 55.88,41.91" fill="url(#starFacetLight)"/>
+          <polygon points="50,50 72.82,42.58 59.51,53.09" fill="url(#starFacetDark)"/>
+
+          <!-- Bottom-Right Point -->
+          <polygon points="50,50 64.11,69.42 59.51,53.09" fill="url(#starFacetLight)"/>
+          <polygon points="50,50 64.11,69.42 50,60" fill="url(#starFacetDark)"/>
+
+          <!-- Bottom-Left Point -->
+          <polygon points="50,50 35.89,69.42 40.49,53.09" fill="url(#starFacetLight)"/>
+          <polygon points="50,50 35.89,69.42 50,60" fill="url(#starFacetDark)"/>
+
+          <!-- Top-Left Point -->
+          <polygon points="50,50 27.18,42.58 44.12,41.91" fill="url(#starFacetLight)"/>
+          <polygon points="50,50 27.18,42.58 40.49,53.09" fill="url(#starFacetDark)"/>
+
+          <!-- Star Outline Sheen -->
+          <polygon points="50,26 55.88,41.91 72.82,42.58 59.51,53.09 64.11,69.42 50,60 35.89,69.42 40.49,53.09 27.18,42.58 44.12,41.91" 
+                   fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.9"/>
+        </g>
+
+        <!-- 7. Specular Lens Arc & Flare Star -->
+        <path d="M 22 28 A 38 38 0 0 1 78 28" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.65"/>
+        <circle cx="28" cy="24" r="2.5" fill="#ffffff" filter="drop-shadow(0 0 4px #00f0ff)"/>
+      </svg>
+    `;
+
+    const SVG_REAL_BOMB = `
+      <svg class="tile-svg" viewBox="0 0 100 100">
+        <defs>
+          <radialGradient id="sphereGrad" cx="30%" cy="30%">
+            <stop offset="0%" stop-color="#475569"/>
+            <stop offset="40%" stop-color="#1e293b"/>
+            <stop offset="85%" stop-color="#090d16"/>
+            <stop offset="100%" stop-color="#000000"/>
+          </radialGradient>
+          <radialGradient id="fireSpark" cx="50%" cy="50%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="40%" stop-color="#fef08a"/>
+            <stop offset="80%" stop-color="#f59e0b"/>
+            <stop offset="100%" stop-color="#ef4444"/>
+          </radialGradient>
+          <filter id="fuseHeat">
+            <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f59e0b"/>
+          </filter>
+        </defs>
+        <circle cx="50" cy="58" r="32" fill="url(#sphereGrad)" filter="drop-shadow(0 8px 12px rgba(0,0,0,0.8))"/>
+        <ellipse cx="40" cy="46" rx="9" ry="5" transform="rotate(-30 40 46)" fill="rgba(255,255,255,0.2)"/>
+        <rect x="44" y="20" width="12" height="9" rx="2" fill="#64748b"/>
+        <rect x="42" y="18" width="16" height="4" rx="1.5" fill="#94a3b8"/>
+        <path d="M50 18 Q62 6 74 14" fill="none" stroke="#d97706" stroke-width="4.5" stroke-linecap="round"/>
+        <circle cx="76" cy="14" r="7" fill="url(#fireSpark)" filter="url(#fuseHeat)"/>
+      </svg>
+    `;
+
+    /* ==========================================================================
+       5. CORE MINES ENGINE WITH 100% REALTIME BALANCE SYNC
+       ========================================================================== */
+    const Sound = new RealisticSoundEngine();
+
+    class RealMinesGame {
+      constructor() {
+        this.boardSize = 25;
+        this.mineCount = 2;
+        this.currentBet = 100;
+        this.takaBalance = 0.00;
+        this.isActive = false;
+        this.mines = new Set();
+        this.revealedCount = 0;
+        this.currentMultiplier = 1.00;
+
+        this.gridEl = document.getElementById('gridBoard');
+        this.multTapeEl = document.getElementById('multiplierTrack');
+        this.primaryBtn = document.getElementById('primaryActionBtn');
+        this.takaBalanceEl = document.getElementById('takaBalance');
+        this.activeMultEl = document.getElementById('activeMultDisplay');
+        this.betInput = document.getElementById('betAmountInput');
+        this.mineBadge = document.getElementById('mineBadge');
+        this.toast = document.getElementById('statusToast');
+        this.toastTitle = document.getElementById('toastTitle');
+        this.toastDesc = document.getElementById('toastDesc');
+
+        this.initGrid();
+        this.initDatabaseSync();
+        this.attachEvents();
+        this.renderMultipliers();
+      }
+
+      initDatabaseSync() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let phoneFound = urlParams.get('phone') || urlParams.get('user') || urlParams.get('uid');
+
+        if (!phoneFound) {
+          try {
+            if (window.parent && window.parent.user && window.parent.user.phone) {
+              phoneFound = window.parent.user.phone;
+            }
+          } catch(e) {}
+        }
+
+        if (!phoneFound) {
+          try {
+            phoneFound = localStorage.getItem('bd99_user');
+          } catch(e) {}
+        }
+
+        if (phoneFound) {
+          this.bindUser(phoneFound);
+        } else {
+          database.ref('users').limitToLast(1).once('value', (snap) => {
+            if (snap.exists()) {
+              const data = snap.val();
+              const lastPhone = Object.keys(data)[0];
+              if (lastPhone) this.bindUser(lastPhone);
+            }
+          });
+        }
+      }
+
+      bindUser(phone) {
+        activePhone = phone;
+        try { localStorage.setItem('bd99_user', phone); } catch(e) {}
+
+        database.ref('users/' + phone + '/balance').on('value', (snapshot) => {
+          if (snapshot.exists() && snapshot.val() !== null) {
+            this.takaBalance = parseFloat(snapshot.val()) || 0;
+            this.updateDisplays();
+
+            try {
+              if (window.parent && window.parent.document) {
+                window.parent.document.querySelectorAll('.userBalance').forEach(e => {
+                  e.innerText = this.takaBalance.toFixed(2);
+                });
+              }
+            } catch(e) {}
+          }
+        });
+      }
+
+      deductRealBalance(amount) {
+        this.takaBalance = parseFloat((this.takaBalance - amount).toFixed(2));
+        this.updateDisplays();
+
+        if (activePhone) {
+          database.ref('users/' + activePhone + '/balance').transaction((curr) => {
+            let val = parseFloat(curr);
+            if (isNaN(val)) return 0;
+            return Math.max(0, parseFloat((val - amount).toFixed(2)));
+          });
+
+          database.ref('users/' + activePhone + '/wager_left').transaction((curr) => {
+            let left = parseFloat(curr || 0) - amount;
+            return left < 0 ? 0 : parseFloat(left.toFixed(2));
+          });
+        }
+
+        try {
+          if (window.parent && window.parent.document) {
+            window.parent.document.querySelectorAll('.userBalance').forEach(e => {
+              e.innerText = this.takaBalance.toFixed(2);
+            });
+          }
+        } catch(e) {}
+      }
+
+      addRealBalance(amount) {
+        if (amount <= 0) return;
+        this.takaBalance = parseFloat((this.takaBalance + amount).toFixed(2));
+        this.updateDisplays();
+
+        if (activePhone) {
+          database.ref('users/' + activePhone + '/balance').transaction((curr) => {
+            let val = parseFloat(curr || 0);
+            return parseFloat((val + amount).toFixed(2));
+          });
+        }
+
+        try {
+          if (window.parent && window.parent.document) {
+            window.parent.document.querySelectorAll('.userBalance').forEach(e => {
+              e.innerText = this.takaBalance.toFixed(2);
+            });
+          }
+        } catch(e) {}
+      }
+
+      initGrid() {
+        this.gridEl.innerHTML = '';
+        for (let i = 0; i < this.boardSize; i++) {
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.dataset.index = i;
+          tile.innerHTML = `
+            <div class="tile-inner">
+              <div class="tile-face tile-front"></div>
+              <div class="tile-face tile-back"></div>
+            </div>
+          `;
+          this.gridEl.appendChild(tile);
+        }
+      }
+
+      attachEvents() {
+        this.gridEl.addEventListener('click', (e) => {
+          const tile = e.target.closest('.tile');
+          if (!tile || !this.isActive) return;
+          this.handleTileClick(parseInt(tile.dataset.index, 10), tile);
+        });
+
+        document.querySelectorAll('#diffSelector .diff-tab').forEach(tab => {
+          tab.addEventListener('click', (e) => {
+            if (this.isActive) return;
+            document.querySelectorAll('#diffSelector .diff-tab').forEach(t => t.classList.remove('active'));
+            const target = e.currentTarget;
+            target.classList.add('active');
+            this.mineCount = parseInt(target.dataset.mines, 10);
+
+            const map = { 2: '২ টি বোম (NORMAL)', 4: '৪ টি বোম (EASY)', 5: '৫ টি বোম (MIN/HARD)' };
+            this.mineBadge.innerText = map[this.mineCount];
+
+            this.renderMultipliers();
+            Sound.playClick();
+          });
+        });
+
+        this.betInput.addEventListener('change', () => this.validateBetInput());
+
+        document.getElementById('chipMin').addEventListener('click', () => {
+          if (this.isActive) return;
+          this.setBet(5);
+        });
+        document.getElementById('chipHalf').addEventListener('click', () => {
+          if (this.isActive) return;
+          this.setBet(Math.floor(this.currentBet / 2));
+        });
+        document.getElementById('chipDouble').addEventListener('click', () => {
+          if (this.isActive) return;
+          this.setBet(this.currentBet * 2);
+        });
+        document.getElementById('chipMax').addEventListener('click', () => {
+          if (this.isActive) return;
+          this.setBet(2999);
+        });
+
+        this.primaryBtn.addEventListener('click', () => {
+          if (this.isActive) {
+            this.cashout();
+          } else {
+            this.startRound();
+          }
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+          Sound.muted = !Sound.muted;
+          document.getElementById('soundIcon').style.opacity = Sound.muted ? '0.35' : '1.0';
+          Sound.playClick();
+        });
+      }
+
+      setBet(amt) {
+        this.currentBet = Math.min(2999, Math.max(5, amt));
+        this.betInput.value = this.currentBet;
+        Sound.playClick();
+      }
+
+      validateBetInput() {
+        let val = parseInt(this.betInput.value, 10);
+        if (isNaN(val) || val < 5) val = 5;
+        if (val > 2999) val = 2999;
+        this.currentBet = val;
+        this.betInput.value = val;
+      }
+
+      calculateMultiplier(step) {
+        let mult = 0.98;
+        for (let i = 0; i < step; i++) {
+          mult *= (this.boardSize - i) / (this.boardSize - this.mineCount - i);
+        }
+        return Math.max(1.02, mult);
+      }
+
+      renderMultipliers() {
+        this.multTapeEl.innerHTML = '';
+        const totalSafe = this.boardSize - this.mineCount;
+        const count = Math.min(totalSafe, 10);
+
+        for (let i = 1; i <= count; i++) {
+          const node = document.createElement('div');
+          node.className = `step-pill ${i === 1 ? 'active' : ''}`;
+          node.innerText = `${this.calculateMultiplier(i).toFixed(2)}×`;
+          this.multTapeEl.appendChild(node);
+        }
+      }
+
+      startRound() {
+        this.validateBetInput();
+
+        if (this.takaBalance < this.currentBet) {
+          this.showToast('অপর্যাপ্ত ব্যালেন্স', 'আপনার ব্যালেন্স বাজির চেয়ে কম!');
+          return;
+        }
+
+        this.deductRealBalance(this.currentBet);
+
+        this.revealedCount = 0;
+        this.currentMultiplier = 1.00;
+        this.isActive = true;
+
+        this.gridEl.querySelectorAll('.tile').forEach(t => {
+          t.className = 'tile';
+          t.style.opacity = '1';
+          t.querySelector('.tile-back').innerHTML = '';
+        });
+
+        this.mines.clear();
+        while (this.mines.size < this.mineCount) {
+          this.mines.add(Math.floor(Math.random() * this.boardSize));
+        }
+
+        this.betInput.disabled = true;
+        this.updateDisplays();
+        this.renderMultipliers();
+
+        this.primaryBtn.className = 'action-btn cashout';
+        this.primaryBtn.innerHTML = `<span>ক্যাশআউট (৳০)</span>`;
+        Sound.playClick();
+      }
+
+      handleTileClick(idx, tileEl) {
+        if (tileEl.classList.contains('flipped')) return;
+
+        const rect = tileEl.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+
+        if (this.mines.has(idx)) {
+          this.triggerMine(tileEl, cx, cy);
+        } else {
+          this.triggerDiamond(tileEl, cx, cy);
+        }
+      }
+
+      triggerDiamond(tileEl, cx, cy) {
+        this.revealedCount++;
+        tileEl.classList.add('flipped', 'safe');
+        tileEl.querySelector('.tile-back').innerHTML = SVG_REAL_DIAMOND;
+
+        spawnDiamondSparks(cx, cy);
+
+        this.currentMultiplier = this.calculateMultiplier(this.revealedCount);
+        const winnableTaka = Math.floor(this.currentBet * this.currentMultiplier);
+
+        document.querySelectorAll('.step-pill').forEach((pill, i) => {
+          pill.classList.remove('active');
+          if (i + 1 === this.revealedCount) {
+            pill.classList.add('active');
+            pill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          } else if (i + 1 < this.revealedCount) {
+            pill.classList.add('passed');
+          }
+        });
+
+        this.primaryBtn.innerHTML = `<span>ক্যাশআউট +৳${winnableTaka.toLocaleString()}</span>`;
+        this.activeMultEl.innerText = `${this.currentMultiplier.toFixed(2)}×`;
+
+        Sound.playDiamond(this.revealedCount);
+
+        if (this.revealedCount === (this.boardSize - this.mineCount)) {
+          this.cashout();
+        }
+      }
+
+      triggerMine(bombTile, cx, cy) {
+        this.isActive = false;
+        bombTile.classList.add('flipped', 'mine');
+        bombTile.querySelector('.tile-back').innerHTML = SVG_REAL_BOMB;
+
+        spawnExplosionSparks(cx, cy);
+
+        this.gridEl.classList.add('shake-impact');
+        setTimeout(() => this.gridEl.classList.remove('shake-impact'), 450);
+
+        Sound.playBlast();
+
+        this.gridEl.querySelectorAll('.tile').forEach(t => {
+          const i = parseInt(t.dataset.index, 10);
+          if (this.mines.has(i)) {
+            t.classList.add('flipped', 'mine');
+            t.querySelector('.tile-back').innerHTML = SVG_REAL_BOMB;
+          } else if (!t.classList.contains('flipped')) {
+            t.classList.add('flipped');
+            t.querySelector('.tile-back').innerHTML = SVG_REAL_DIAMOND;
+            t.style.opacity = '0.35';
+          }
+        });
+
+        this.showToast('রাউন্ড শেষ!', `বোম ব্লাস্ট! -৳${this.currentBet} টাকা`);
+        this.resetReady();
+      }
+
+      cashout() {
+        if (!this.isActive || this.revealedCount === 0) return;
+        this.isActive = false;
+
+        const prize = Math.floor(this.currentBet * this.currentMultiplier);
+        this.addRealBalance(prize);
+
+        Sound.playCashout();
+
+        this.gridEl.querySelectorAll('.tile').forEach(t => {
+          const i = parseInt(t.dataset.index, 10);
+          if (!t.classList.contains('flipped')) {
+            t.classList.add('flipped');
+            const back = t.querySelector('.tile-back');
+            if (this.mines.has(i)) {
+              t.classList.add('mine');
+              back.innerHTML = SVG_REAL_BOMB;
+            } else {
+              back.innerHTML = SVG_REAL_DIAMOND;
+            }
+            t.style.opacity = '0.4';
+          }
+        });
+
+        this.showToast('অভিনন্দন!', `+৳${prize.toLocaleString()} টাকা ক্যাশআউট হয়েছে!`);
+        this.resetReady();
+      }
+
+      resetReady() {
+        this.betInput.disabled = false;
+        this.updateDisplays();
+        this.primaryBtn.className = 'action-btn start';
+        this.primaryBtn.innerHTML = `<span>নতুন রাউন্ড শুরু করুন</span>`;
+      }
+
+      updateDisplays() {
+        this.takaBalanceEl.innerText = this.takaBalance.toFixed(2);
+        this.activeMultEl.innerText = `${this.currentMultiplier.toFixed(2)}×`;
+      }
+
+      showToast(title, desc) {
+        this.toastTitle.innerText = title;
+        this.toastDesc.innerText = desc;
+        this.toast.classList.add('visible');
+        setTimeout(() => this.toast.classList.remove('visible'), 2000);
+      }
+    }
+
+    function initAmbientStars() {
+      const cvs = document.getElementById('ambientCanvas');
+      const ctx = cvs.getContext('2d');
+      let w = (cvs.width = window.innerWidth);
+      let h = (cvs.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        w = cvs.width = window.innerWidth;
+        h = cvs.height = window.innerHeight;
+      });
+
+      const stars = Array.from({ length: 45 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 1.5 + 0.5,
+        alpha: Math.random() * 0.5 + 0.2,
+        speed: Math.random() * 0.25 + 0.08
+      }));
+
+      function render() {
+        ctx.clearRect(0, 0, w, h);
+        stars.forEach(s => {
+          s.y -= s.speed;
+          if (s.y < 0) s.y = h;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(0, 240, 255, ${s.alpha})`;
+          ctx.fill();
+        });
+        requestAnimationFrame(render);
+      }
+      render();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initAmbientStars();
+      const game = new RealMinesGame();
+
+      const loader = document.getElementById('loaderScreen');
+      const loadText = document.getElementById('loaderText');
+      let p = 0;
+      const timer = setInterval(() => {
+        p += Math.floor(Math.random() * 20) + 12;
+        if (p >= 100) {
+          p = 100;
+          clearInterval(timer);
+          loadText.innerText = 'VAULT UNLOCKED 100%';
+          setTimeout(() => {
+            loader.classList.add('fade-out');
+            setTimeout(() => loader.style.display = 'none', 500);
+          }, 250);
+        } else {
+          loadText.innerText = `CONNECTING SECURE VAULT... ${p}%`;
+        }
+      }, 55);
+    });
+  </script>
+</body>
+</html>
